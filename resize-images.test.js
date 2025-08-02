@@ -14,7 +14,7 @@ vi.mock('child_process', () => ({
 }));
 
 // Import the functions to test
-const { parseArguments, validateArguments, ARGUMENT_DEFINITIONS, generateHelpText } = require('./resize-images.js');
+const { parseArguments, validateArguments, ARGUMENT_DEFINITIONS, generateHelpText, colors, colorize, stripColors } = require('./resize-images.js');
 
 describe('resize-images', () => {
   beforeEach(() => {
@@ -141,24 +141,79 @@ describe('resize-images', () => {
   describe('generateHelpText', () => {
     it('should generate proper help text with all arguments', () => {
       const helpText = generateHelpText();
+      const plainText = stripColors(helpText);
 
-      expect(helpText).toContain('Usage: node resize-images.js [options]');
-      expect(helpText).toContain('Options:');
-      expect(helpText).toContain('-i, -input <value>');
-      expect(helpText).toContain('-o, -output <value>');
-      expect(helpText).toContain('Input folder containing images to resize');
-      expect(helpText).toContain('Output folder where resized images will be saved');
+      // Test that the help text contains the expected content (without color codes)
+      expect(plainText).toContain('Usage: node resize-images.js [options]');
+      expect(plainText).toContain('Options:');
+      expect(plainText).toContain('-i, -input <value>');
+      expect(plainText).toContain('-o, -output <value>');
+      expect(plainText).toContain('Input folder containing images to resize');
+      expect(plainText).toContain('Output folder where resized images will be saved');
     });
 
     it('should include all argument variants in help text', () => {
       const helpText = generateHelpText();
+      const plainText = stripColors(helpText);
 
-      // Check that all variants are included
+      // Check that all variants are included (without color codes)
       for (const [key, definition] of Object.entries(ARGUMENT_DEFINITIONS)) {
         const variants = definition.variants.join(', ');
-        expect(helpText).toContain(variants);
-        expect(helpText).toContain(definition.description);
+        expect(plainText).toContain(variants);
+        expect(plainText).toContain(definition.description);
       }
+    });
+
+    it('should contain ANSI color codes', () => {
+      const helpText = generateHelpText();
+
+      // Check that color codes are present
+      expect(helpText).toContain(colors.bright);
+      expect(helpText).toContain(colors.blue);
+      expect(helpText).toContain(colors.green);
+      expect(helpText).toContain(colors.reset);
+    });
+
+    it('should strip colors correctly', () => {
+      const coloredText = colorize.success('test message');
+      const strippedText = stripColors(coloredText);
+
+      expect(strippedText).toBe('test message');
+      expect(coloredText).not.toBe(strippedText); // Should be different
+    });
+  });
+
+  describe('color utilities', () => {
+    it('should have all required color codes', () => {
+      expect(colors).toHaveProperty('reset');
+      expect(colors).toHaveProperty('bright');
+      expect(colors).toHaveProperty('red');
+      expect(colors).toHaveProperty('green');
+      expect(colors).toHaveProperty('blue');
+      expect(colors).toHaveProperty('white');
+      expect(colors).toHaveProperty('bgRed');
+    });
+
+    it('should have colorize functions', () => {
+      expect(colorize).toHaveProperty('error');
+      expect(colorize).toHaveProperty('success');
+      expect(colorize).toHaveProperty('info');
+      expect(colorize).toHaveProperty('warning');
+    });
+
+    it('should apply error styling correctly', () => {
+      const errorText = colorize.error('ERROR:');
+      expect(errorText).toContain(colors.bright);
+      expect(errorText).toContain(colors.white);
+      expect(errorText).toContain(colors.bgRed);
+      expect(errorText).toContain(colors.reset);
+    });
+
+    it('should apply success styling correctly', () => {
+      const successText = colorize.success('Success message');
+      expect(successText).toContain(colors.bright);
+      expect(successText).toContain(colors.green);
+      expect(successText).toContain(colors.reset);
     });
   });
 

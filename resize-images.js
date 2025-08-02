@@ -3,6 +3,39 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// ANSI color codes for terminal output
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  bgRed: '\x1b[41m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+  bgBlue: '\x1b[44m',
+  bgMagenta: '\x1b[45m',
+  bgCyan: '\x1b[46m',
+  bgWhite: '\x1b[47m'
+};
+
+// Color utility functions
+const colorize = {
+  error: (text) => `${colors.bright}${colors.white}${colors.bgRed}${text}${colors.reset}`,
+  success: (text) => `${colors.bright}${colors.green}${text}${colors.reset}`,
+  info: (text) => `${colors.bright}${colors.blue}${text}${colors.reset}`,
+  warning: (text) => `${colors.bright}${colors.yellow}${text}${colors.reset}`
+};
+
+// Helper function to strip ANSI color codes for testing
+const stripColors = (text) => {
+  return text.replace(/\x1b\[[0-9;]*m/g, '');
+};
+
 // Argument definitions with metadata
 const ARGUMENT_DEFINITIONS = {
   input: {
@@ -48,12 +81,12 @@ function validateArguments(options) {
 
 // Generate help text from argument definitions
 function generateHelpText() {
-  let helpText = 'Usage: node resize-images.js [options]\n\n';
-  helpText += 'Options:\n';
+  let helpText = `${colorize.info('Usage: node resize-images.js [options]')}\n\n`;
+  helpText += `${colorize.info('Options:')}\n`;
 
   for (const [key, definition] of Object.entries(ARGUMENT_DEFINITIONS)) {
     const variants = definition.variants.join(', ');
-    helpText += `  ${variants} <value>    ${definition.description}\n`;
+    helpText += `  ${colorize.success(variants)} <value>    ${definition.description}\n`;
   }
 
   return helpText;
@@ -117,17 +150,17 @@ if (require.main === module) {
     resizeImages(inputFolder, outputFolder, outputWidth)
       .then(results => {
         if (Array.isArray(results)) {
-          results.forEach(result => console.log(result));
+          results.forEach(result => console.log(colorize.success(result)));
         } else {
-          console.log(results);
+          console.log(colorize.info(results));
         }
       })
       .catch(error => {
-        console.error('Error:', error.message);
+        console.error(colorize.error('ERROR:'), error.message);
         process.exit(1);
       });
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error(colorize.error('ERROR:'), error.message);
     console.error(generateHelpText());
     process.exit(1);
   }
@@ -139,5 +172,8 @@ module.exports = {
   validateArguments,
   resizeImages,
   ARGUMENT_DEFINITIONS,
-  generateHelpText
+  generateHelpText,
+  colors,
+  colorize,
+  stripColors
 };
