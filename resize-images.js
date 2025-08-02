@@ -56,6 +56,13 @@ const ARGUMENT_DEFINITIONS = {
     errorMessage: 'Size must be a valid number. Use -s or -size to specify output width.',
     required: false,
     defaultValue: 350
+  },
+  format: {
+    variants: ['-f', '-format'],
+    description: 'Output format for images (jpg, png, webp)',
+    errorMessage: 'Format must be jpg, png, or webp. Use -f or -format to specify output format.',
+    required: false,
+    defaultValue: null
   }
 };
 
@@ -93,6 +100,14 @@ function validateArguments(options) {
         throw new Error('Size must be a positive number.');
       }
     }
+
+    // Validate format argument if provided
+    if (key === 'format' && options[key] !== undefined) {
+      const validFormats = ['jpg', 'png', 'webp'];
+      if (!validFormats.includes(options[key].toLowerCase())) {
+        throw new Error('Format must be jpg, png, or webp.');
+      }
+    }
   }
 }
 
@@ -112,7 +127,7 @@ function generateHelpText() {
 }
 
 // Main resize function
-function resizeImages(inputFolder, outputFolder, outputWidth = 350) {
+function resizeImages(inputFolder, outputFolder, outputWidth = 350, outputFormat = null) {
   // Ensure output folder exists
   if (!fs.existsSync(outputFolder)) {
     fs.mkdirSync(outputFolder, { recursive: true });
@@ -136,9 +151,22 @@ function resizeImages(inputFolder, outputFolder, outputWidth = 350) {
       const resizePromises = imageFiles.map(file => {
         return new Promise((resolveFile, rejectFile) => {
           const inputPath = path.join(inputFolder, file);
-          const outputPath = path.join(outputFolder, file);
 
-          const cmd = `ffmpeg -y -i "${inputPath}" -vf "scale=${outputWidth}:-1" "${outputPath}"`;
+          // Determine output filename and extension
+          let outputFilename = file;
+          if (outputFormat) {
+            const nameWithoutExt = path.parse(file).name;
+            outputFilename = `${nameWithoutExt}.${outputFormat}`;
+          }
+          const outputPath = path.join(outputFolder, outputFilename);
+
+          // Build ffmpeg command with format conversion if specified
+          let cmd = `ffmpeg -y -i "${inputPath}" -vf "scale=${outputWidth}:-1"`;
+          if (outputFormat) {
+            cmd += ` -f ${outputFormat}`;
+          }
+          cmd += ` "${outputPath}"`;
+
           exec(cmd, (error, stdout, stderr) => {
             if (error) {
               rejectFile(new Error(`Error resizing ${file}: ${error.message}`));
@@ -165,8 +193,9 @@ if (require.main === module) {
     const inputFolder = options.input;
     const outputFolder = options.output;
     const outputWidth = options.size ? parseInt(options.size) : ARGUMENT_DEFINITIONS.size.defaultValue;
+    const outputFormat = options.format ? options.format.toLowerCase() : null;
 
-    resizeImages(inputFolder, outputFolder, outputWidth)
+    resizeImages(inputFolder, outputFolder, outputWidth, outputFormat)
       .then(results => {
         if (Array.isArray(results)) {
           results.forEach(result => console.log(colorize.success(result)));

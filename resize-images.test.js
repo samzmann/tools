@@ -52,6 +52,17 @@ describe('resize-images', () => {
       expect(ARGUMENT_DEFINITIONS.size.variants).toEqual(['-s', '-size']);
       expect(ARGUMENT_DEFINITIONS.size.required).toBe(false);
       expect(ARGUMENT_DEFINITIONS.size.defaultValue).toBe(350);
+
+      // Check format argument structure
+      expect(ARGUMENT_DEFINITIONS).toHaveProperty('format');
+      expect(ARGUMENT_DEFINITIONS.format).toHaveProperty('variants');
+      expect(ARGUMENT_DEFINITIONS.format).toHaveProperty('description');
+      expect(ARGUMENT_DEFINITIONS.format).toHaveProperty('errorMessage');
+      expect(ARGUMENT_DEFINITIONS.format).toHaveProperty('required');
+      expect(ARGUMENT_DEFINITIONS.format).toHaveProperty('defaultValue');
+      expect(ARGUMENT_DEFINITIONS.format.variants).toEqual(['-f', '-format']);
+      expect(ARGUMENT_DEFINITIONS.format.required).toBe(false);
+      expect(ARGUMENT_DEFINITIONS.format.defaultValue).toBe(null);
     });
   });
 
@@ -131,6 +142,40 @@ describe('resize-images', () => {
         input: '/input/folder',
         output: '/output/folder',
         size: '600'
+      });
+    });
+
+    it('should parse format argument with -f', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-f', 'jpg'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'jpg'
+      });
+    });
+
+    it('should parse format argument with -format', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-format', 'png'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'png'
+      });
+    });
+
+    it('should parse all arguments including format', () => {
+      const args = ['-input', '/input/folder', '-output', '/output/folder', '-size', '600', '-format', 'webp'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '600',
+        format: 'webp'
       });
     });
   });
@@ -233,6 +278,75 @@ describe('resize-images', () => {
 
       expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
     });
+
+    it('should not throw error when format is missing (optional argument)', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should not throw error when format is provided with valid jpg', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'jpg'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should not throw error when format is provided with valid png', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'png'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should not throw error when format is provided with valid webp', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'webp'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should not throw error when format is provided with valid uppercase format', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'JPG'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should throw error when format is provided with invalid format', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: 'gif'
+      };
+
+      expect(() => validateArguments(options)).toThrow('Format must be jpg, png, or webp.');
+    });
+
+    it('should throw error when format is provided with empty string', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        format: ''
+      };
+
+      expect(() => validateArguments(options)).toThrow('Format must be jpg, png, or webp.');
+    });
   });
 
   describe('generateHelpText', () => {
@@ -246,9 +360,11 @@ describe('resize-images', () => {
       expect(plainText).toContain('-i, -input <value>');
       expect(plainText).toContain('-o, -output <value>');
       expect(plainText).toContain('-s, -size <value>');
+      expect(plainText).toContain('-f, -format <value>');
       expect(plainText).toContain('Input folder containing images to resize');
       expect(plainText).toContain('Output folder where resized images will be saved');
       expect(plainText).toContain('Output width for resized images (default: 350)');
+      expect(plainText).toContain('Output format for images (jpg, png, webp)');
     });
 
     it('should include all argument variants in help text', () => {
@@ -360,6 +476,23 @@ describe('resize-images', () => {
       const options = parseArguments(args);
 
       expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
+    });
+
+    it('should parse and validate arguments with format successfully', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-f', 'jpg'];
+      const options = parseArguments(args);
+
+      expect(() => validateArguments(options)).not.toThrow();
+      expect(options.input).toBe('/input/folder');
+      expect(options.output).toBe('/output/folder');
+      expect(options.format).toBe('jpg');
+    });
+
+    it('should throw error when format is invalid in complete argument set', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-format', 'gif'];
+      const options = parseArguments(args);
+
+      expect(() => validateArguments(options)).toThrow('Format must be jpg, png, or webp.');
     });
   });
 });
