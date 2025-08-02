@@ -172,7 +172,7 @@ function resizeImages(inputFolder, outputFolder, outputWidth = 350, outputFormat
               rejectFile(new Error(`Error resizing ${file}: ${error.message}`));
               return;
             }
-            resolveFile(`Resized ${file} -> ${outputPath}`);
+            resolveFile(`${file} -> ${outputPath}`);
           });
         });
       });
@@ -198,7 +198,10 @@ if (require.main === module) {
     resizeImages(inputFolder, outputFolder, outputWidth, outputFormat)
       .then(results => {
         if (Array.isArray(results)) {
-          results.forEach(result => console.log(colorize.success(result)));
+          results.forEach(result => {
+            const processedLabel = `${colors.bright}${colors.green}PROCESSED:${colors.reset}`;
+            console.log(`${processedLabel} ${result}`);
+          });
         } else {
           console.log(colorize.info(results));
         }
