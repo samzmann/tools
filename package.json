@@ -1,0 +1,12 @@
+{
+  "name": "tools",
+  "version": "0.0.0",
+  "scripts": {
+    "test": "vitest",
+    "test:no-watch": "vitest run"
+  },
+  "private": true,
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
