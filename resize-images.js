@@ -41,12 +41,21 @@ const ARGUMENT_DEFINITIONS = {
   input: {
     variants: ['-i', '-input'],
     description: 'Input folder containing images to resize',
-    errorMessage: 'Input folder is required. Use -i or -input to specify input folder.'
+    errorMessage: 'Input folder is required. Use -i or -input to specify input folder.',
+    required: true
   },
   output: {
     variants: ['-o', '-output'],
     description: 'Output folder where resized images will be saved',
-    errorMessage: 'Output folder is required. Use -o or -output to specify output folder.'
+    errorMessage: 'Output folder is required. Use -o or -output to specify output folder.',
+    required: true
+  },
+  size: {
+    variants: ['-s', '-size'],
+    description: 'Output width for resized images (default: 350)',
+    errorMessage: 'Size must be a valid number. Use -s or -size to specify output width.',
+    required: false,
+    defaultValue: 350
   }
 };
 
@@ -73,8 +82,16 @@ function parseArguments(args = process.argv.slice(2)) {
 // Validate arguments and throw error if missing
 function validateArguments(options) {
   for (const [key, definition] of Object.entries(ARGUMENT_DEFINITIONS)) {
-    if (!options[key]) {
+    if (definition.required && !options[key]) {
       throw new Error(definition.errorMessage);
+    }
+
+    // Validate size argument if provided
+    if (key === 'size' && options[key]) {
+      const sizeValue = parseInt(options[key]);
+      if (isNaN(sizeValue) || sizeValue <= 0) {
+        throw new Error('Size must be a positive number.');
+      }
     }
   }
 }
@@ -86,7 +103,9 @@ function generateHelpText() {
 
   for (const [key, definition] of Object.entries(ARGUMENT_DEFINITIONS)) {
     const variants = definition.variants.join(', ');
-    helpText += `  ${colorize.success(variants)} <value>    ${definition.description}\n`;
+    const requiredText = definition.required ? ' (required)' : ' (optional)';
+    const defaultValueText = definition.defaultValue ? ` [default: ${definition.defaultValue}]` : '';
+    helpText += `  ${colorize.success(variants)} <value>    ${definition.description}${requiredText}${defaultValueText}\n`;
   }
 
   return helpText;
@@ -145,7 +164,7 @@ if (require.main === module) {
 
     const inputFolder = options.input;
     const outputFolder = options.output;
-    const outputWidth = 350; // Change this to your desired width
+    const outputWidth = options.size ? parseInt(options.size) : ARGUMENT_DEFINITIONS.size.defaultValue;
 
     resizeImages(inputFolder, outputFolder, outputWidth)
       .then(results => {

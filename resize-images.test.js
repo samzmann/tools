@@ -25,18 +25,33 @@ describe('resize-images', () => {
     it('should have proper structure for each argument', () => {
       expect(ARGUMENT_DEFINITIONS).toHaveProperty('input');
       expect(ARGUMENT_DEFINITIONS).toHaveProperty('output');
+      expect(ARGUMENT_DEFINITIONS).toHaveProperty('size');
 
       // Check input argument structure
       expect(ARGUMENT_DEFINITIONS.input).toHaveProperty('variants');
       expect(ARGUMENT_DEFINITIONS.input).toHaveProperty('description');
       expect(ARGUMENT_DEFINITIONS.input).toHaveProperty('errorMessage');
+      expect(ARGUMENT_DEFINITIONS.input).toHaveProperty('required');
       expect(ARGUMENT_DEFINITIONS.input.variants).toEqual(['-i', '-input']);
+      expect(ARGUMENT_DEFINITIONS.input.required).toBe(true);
 
       // Check output argument structure
       expect(ARGUMENT_DEFINITIONS.output).toHaveProperty('variants');
       expect(ARGUMENT_DEFINITIONS.output).toHaveProperty('description');
       expect(ARGUMENT_DEFINITIONS.output).toHaveProperty('errorMessage');
+      expect(ARGUMENT_DEFINITIONS.output).toHaveProperty('required');
       expect(ARGUMENT_DEFINITIONS.output.variants).toEqual(['-o', '-output']);
+      expect(ARGUMENT_DEFINITIONS.output.required).toBe(true);
+
+      // Check size argument structure
+      expect(ARGUMENT_DEFINITIONS.size).toHaveProperty('variants');
+      expect(ARGUMENT_DEFINITIONS.size).toHaveProperty('description');
+      expect(ARGUMENT_DEFINITIONS.size).toHaveProperty('errorMessage');
+      expect(ARGUMENT_DEFINITIONS.size).toHaveProperty('required');
+      expect(ARGUMENT_DEFINITIONS.size).toHaveProperty('defaultValue');
+      expect(ARGUMENT_DEFINITIONS.size.variants).toEqual(['-s', '-size']);
+      expect(ARGUMENT_DEFINITIONS.size.required).toBe(false);
+      expect(ARGUMENT_DEFINITIONS.size.defaultValue).toBe(350);
     });
   });
 
@@ -83,6 +98,39 @@ describe('resize-images', () => {
       expect(result).toEqual({
         input: '/input/folder',
         output: '/output/folder'
+      });
+    });
+
+    it('should parse size argument with -s', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-s', '500'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '500'
+      });
+    });
+
+    it('should parse size argument with -size', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-size', '800'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '800'
+      });
+    });
+
+    it('should parse all arguments together', () => {
+      const args = ['-input', '/input/folder', '-output', '/output/folder', '-size', '600'];
+      const result = parseArguments(args);
+
+      expect(result).toEqual({
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '600'
       });
     });
   });
@@ -136,6 +184,55 @@ describe('resize-images', () => {
 
       expect(() => validateArguments(options)).toThrow('Output folder is required. Use -o or -output to specify output folder.');
     });
+
+    it('should not throw error when size is missing (optional argument)', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should not throw error when size is provided with valid number', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '500'
+      };
+
+      expect(() => validateArguments(options)).not.toThrow();
+    });
+
+    it('should throw error when size is provided with invalid number', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        size: 'invalid'
+      };
+
+      expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
+    });
+
+    it('should throw error when size is provided with zero', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '0'
+      };
+
+      expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
+    });
+
+    it('should throw error when size is provided with negative number', () => {
+      const options = {
+        input: '/input/folder',
+        output: '/output/folder',
+        size: '-100'
+      };
+
+      expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
+    });
   });
 
   describe('generateHelpText', () => {
@@ -148,8 +245,10 @@ describe('resize-images', () => {
       expect(plainText).toContain('Options:');
       expect(plainText).toContain('-i, -input <value>');
       expect(plainText).toContain('-o, -output <value>');
+      expect(plainText).toContain('-s, -size <value>');
       expect(plainText).toContain('Input folder containing images to resize');
       expect(plainText).toContain('Output folder where resized images will be saved');
+      expect(plainText).toContain('Output width for resized images (default: 350)');
     });
 
     it('should include all argument variants in help text', () => {
@@ -162,6 +261,18 @@ describe('resize-images', () => {
         expect(plainText).toContain(variants);
         expect(plainText).toContain(definition.description);
       }
+    });
+
+    it('should show required/optional status and default values in help text', () => {
+      const helpText = generateHelpText();
+      const plainText = stripColors(helpText);
+
+      // Check that required arguments show as required
+      expect(plainText).toContain('(required)');
+
+      // Check that optional arguments show as optional and include default value
+      expect(plainText).toContain('(optional)');
+      expect(plainText).toContain('[default: 350]');
     });
 
     it('should contain ANSI color codes', () => {
@@ -227,11 +338,28 @@ describe('resize-images', () => {
       expect(options.output).toBe('/output/folder');
     });
 
+    it('should parse and validate arguments with size successfully', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-s', '500'];
+      const options = parseArguments(args);
+
+      expect(() => validateArguments(options)).not.toThrow();
+      expect(options.input).toBe('/input/folder');
+      expect(options.output).toBe('/output/folder');
+      expect(options.size).toBe('500');
+    });
+
     it('should throw error when parsing and validating incomplete arguments', () => {
       const args = ['-i', '/input/folder']; // Missing output
       const options = parseArguments(args);
 
       expect(() => validateArguments(options)).toThrow('Output folder is required. Use -o or -output to specify output folder.');
+    });
+
+    it('should throw error when size is invalid in complete argument set', () => {
+      const args = ['-i', '/input/folder', '-o', '/output/folder', '-size', 'invalid'];
+      const options = parseArguments(args);
+
+      expect(() => validateArguments(options)).toThrow('Size must be a positive number.');
     });
   });
 });
